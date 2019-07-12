@@ -12,16 +12,11 @@ layout(set = 0, binding = 0) uniform FluidUniform {
     int swap;
 };
 
-struct LatticeCell {
-    float cell[9];
-};
-
 struct FluidCell {
     float color[3];
 };
-layout (set = 0, binding = 1) buffer CollideBuffer  { LatticeCell collideCells[];  };
-layout (set = 0, binding = 2) buffer StreamBuffer   { LatticeCell streamCells[];   };
-layout (set = 0, binding = 3) buffer FluidBuffer    { FluidCell fluidCells[];    };
+
+layout (set = 0, binding = 1) buffer FluidBuffer    { FluidCell fluidCells[];    };
 
 // 格子的索引
 int indexOfLattice(ivec2 uv) {
@@ -34,12 +29,6 @@ void updateFluid(ivec2 uv, vec2 velocity, float rho) {
     fluidCells[destIndex].color[0] = velocity.x; 
     fluidCells[destIndex].color[1] = velocity.y;
     fluidCells[destIndex].color[2] = rho;
-}
-
-// collide 
-void updateCollide(ivec2 uv, int direction, float collide) {
-    int destIndex = uv.x * int(lattice_num.x) + uv.y;
-    collideCells[destIndex].cell[direction] = collide;
 }
 
 void main() {

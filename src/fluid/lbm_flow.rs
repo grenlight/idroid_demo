@@ -11,8 +11,6 @@ pub struct LBMFlow {
     particle_num_y: f32,
 
     uniform_buf: wgpu::Buffer,
-    lattice0_buffer: wgpu::Buffer,
-    lattice1_buffer: wgpu::Buffer,
     fluid_buffer: wgpu::Buffer,
     staging_buffer: wgpu::Buffer,
 
@@ -49,19 +47,12 @@ pub struct LatticeCell {
     cell: [f32; 9],
 }
 
-fn init_data(nx: u32, ny: u32) -> (Vec<LatticeCell>, Vec<FluidCell>) {
-    let w0 = 4.0 / 9.0;
-    let w1 = 1.0 / 9.0;
-    let w2 = 1.0 / 36.0;
-    let mut lattice: Vec<LatticeCell> = vec![];
+fn init_data() -> Vec<FluidCell> {
     let mut fluid: Vec<FluidCell> = vec![];
-    for _ in 0..(nx * ny) {
-        lattice.push(LatticeCell { cell: [w0, w1, w1, w1, w1, w2, w2, w2, w2] });
-    }
     for _ in 0..6 {
         fluid.push(FluidCell { color: [0.5, 0.0, 1.0] });
     }
-    (lattice, fluid)
+    fluid
 }
 
 fn get_fluid_uniform(lattice_num_x: f32, lattice_num_y: f32, swap: i32) -> FluidUniform {
@@ -100,24 +91,10 @@ impl LBMFlow {
         let mut encoder =
             app_view.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
 
-        let buffer_range = (lattice_num_x * lattice_num_y) as wgpu::BufferAddress
-            * (mem::size_of::<LatticeCell>() as wgpu::BufferAddress);
         // use to save FluidUniform e[18]'s value
         let fluid_buf_range = (6 * mem::size_of::<FluidCell>()) as wgpu::BufferAddress;
 
-        let (lattice_data, fluid_data) = init_data(lattice_num_x as u32, lattice_num_y as u32);
-        let (lattice0_buffer, _) = crate::utils::create_storage_buffer(
-            &mut app_view.device,
-            &mut encoder,
-            &lattice_data,
-            buffer_range,
-        );
-        let (lattice1_buffer, _) = crate::utils::create_storage_buffer(
-            &mut app_view.device,
-            &mut encoder,
-            &lattice_data,
-            buffer_range,
-        );
+        let fluid_data = init_data();
         let (fluid_buffer, staging_buffer) = crate::utils::create_storage_buffer(
             &mut app_view.device,
             &mut encoder,
@@ -158,16 +135,6 @@ impl LBMFlow {
                         visibility: wgpu::ShaderStage::COMPUTE,
                         ty: wgpu::BindingType::StorageBuffer,
                     },
-                    wgpu::BindGroupLayoutBinding {
-                        binding: 2,
-                        visibility: wgpu::ShaderStage::COMPUTE,
-                        ty: wgpu::BindingType::StorageBuffer,
-                    },
-                    wgpu::BindGroupLayoutBinding {
-                        binding: 3,
-                        visibility: wgpu::ShaderStage::COMPUTE,
-                        ty: wgpu::BindingType::StorageBuffer,
-                    },
                 ],
             });
 
@@ -184,20 +151,6 @@ impl LBMFlow {
                 wgpu::Binding {
                     binding: 1,
                     resource: wgpu::BindingResource::Buffer {
-                        buffer: &lattice0_buffer,
-                        range: 0..buffer_range,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 2,
-                    resource: wgpu::BindingResource::Buffer {
-                        buffer: &lattice1_buffer,
-                        range: 0..buffer_range,
-                    },
-                },
-                wgpu::Binding {
-                    binding: 3,
-                    resource: wgpu::BindingResource::Buffer {
                         buffer: &fluid_buffer,
                         range: 0..fluid_buf_range,
                     },
@@ -208,7 +161,8 @@ impl LBMFlow {
             app_view.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 bind_group_layouts: &[&bind_group_layout],
             });
-        // Create the render pipeline
+
+        // Create the compute pipeline
         let shader_collide =
             crate::shader::Shader::new_by_compute("fluid/collide", &mut app_view.device);
         let collide_pipeline =
@@ -227,8 +181,6 @@ impl LBMFlow {
             particle_num_y,
 
             uniform_buf,
-            lattice0_buffer,
-            lattice1_buffer,
             fluid_buffer,
             staging_buffer,
 
