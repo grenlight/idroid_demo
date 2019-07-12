@@ -20,6 +20,7 @@ pub struct LBMFlow {
     bind_group0: wgpu::BindGroup,
     collide_pipeline: wgpu::ComputePipeline,
 
+    bd: wgpu::BufferDescriptor,
     swap: i32,
 }
 
@@ -101,6 +102,7 @@ impl LBMFlow {
 
         let buffer_range = (lattice_num_x * lattice_num_y) as wgpu::BufferAddress
             * (mem::size_of::<LatticeCell>() as wgpu::BufferAddress);
+        // use to save FluidUniform e[18]'s value
         let fluid_buf_range = (6 * mem::size_of::<FluidCell>()) as wgpu::BufferAddress;
 
         let (lattice_data, fluid_data) = init_data(lattice_num_x as u32, lattice_num_y as u32);
@@ -123,12 +125,23 @@ impl LBMFlow {
             fluid_buf_range,
         );
 
-        let uniform_buf = crate::utils::create_uniform_buffer2(
-            &mut app_view.device,
-            &mut encoder,
-            get_fluid_uniform(lattice_num_x, lattice_num_y, swap),
-            128,
-        );
+        // let uniform_buf = crate::utils::create_uniform_buffer2(
+        //     &mut app_view.device,
+        //     &mut encoder,
+        //     get_fluid_uniform(lattice_num_x, lattice_num_y, swap),
+        //     128,
+        // );
+        // hold  BufferDescriptor
+        let bd = wgpu::BufferDescriptor {
+            size: 128,
+            usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
+        };
+        let uniform_buf = app_view.device.create_buffer(&bd);
+        let sb = app_view
+            .device
+            .create_buffer_mapped(1, wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST)
+            .fill_from_slice(&[get_fluid_uniform(lattice_num_x, lattice_num_y, swap)]);
+        encoder.copy_buffer_to_buffer(&sb, 0, &uniform_buf, 0, 128);
 
         // Create pipeline layout
         let bind_group_layout =
@@ -202,9 +215,9 @@ impl LBMFlow {
                 layout: &pipeline_layout,
                 compute_stage: shader_collide.cs_stage(),
             });
-        
+
         app_view.device.get_queue().submit(&[encoder.finish()]);
-       
+
         LBMFlow {
             app_view,
             lattice_num_x,
@@ -221,10 +234,11 @@ impl LBMFlow {
             shader_collide,
             bind_group0,
             collide_pipeline,
+
+            bd,
             swap,
         }
     }
-
 }
 
 impl SurfaceView for LBMFlow {
@@ -239,7 +253,7 @@ impl SurfaceView for LBMFlow {
     }
 
     fn enter_frame(&mut self) {
-       let mut encoder = self
+        let mut encoder = self
             .app_view
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { todo: 0 });
@@ -251,19 +265,25 @@ impl SurfaceView for LBMFlow {
         }
         let fluid_buf_range = (6 * std::mem::size_of::<FluidCell>()) as wgpu::BufferAddress;
 
-        encoder.copy_buffer_to_buffer(&self.fluid_buffer, 0, &self.staging_buffer, 0, fluid_buf_range);
+        encoder.copy_buffer_to_buffer(
+            &self.fluid_buffer,
+            0,
+            &self.staging_buffer,
+            0,
+            fluid_buf_range,
+        );
 
         self.app_view.device.get_queue().submit(&[encoder.finish()]);
 
-         // print staging_buffer's value
+        // print staging_buffer's value
         self.staging_buffer.map_read_async(
-                0,
-                fluid_buf_range,
-                |result: wgpu::BufferMapAsyncResult<&[f32]>| {
-                    // data value should be: [0.0, 0.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, 1.0, 
-                    // 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0,1.0,];
-                    println!("{:?}", result.unwrap().data);
-                },
-            );
+            0,
+            fluid_buf_range,
+            |result: wgpu::BufferMapAsyncResult<&[f32]>| {
+                // data value should be: [0.0, 0.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, 1.0,
+                // 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0,1.0,];
+                println!("{:?}", result.unwrap().data);
+            },
+        );
     }
 }

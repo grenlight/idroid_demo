@@ -34,5 +34,4 @@ fn main() {
     let mut fluid = idroid::fluid::LBMFlow::new(v);
 
     fluid.enter_frame();
-
 }
