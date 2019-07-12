@@ -132,8 +132,9 @@ impl LBMFlow {
         //     128,
         // );
         // hold  BufferDescriptor
+        
         let bd = wgpu::BufferDescriptor {
-            size: 128,
+            size: mem::size_of::<FluidUniform>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
         };
         let uniform_buf = app_view.device.create_buffer(&bd);
@@ -141,7 +142,7 @@ impl LBMFlow {
             .device
             .create_buffer_mapped(1, wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST)
             .fill_from_slice(&[get_fluid_uniform(lattice_num_x, lattice_num_y, swap)]);
-        encoder.copy_buffer_to_buffer(&sb, 0, &uniform_buf, 0, 128);
+        encoder.copy_buffer_to_buffer(&sb, 0, &uniform_buf, 0, mem::size_of::<FluidUniform>() as wgpu::BufferAddress);
 
         // Create pipeline layout
         let bind_group_layout =
