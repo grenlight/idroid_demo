@@ -1,20 +1,10 @@
 pub mod gaussian;
 
 pub fn clear_color() -> wgpu::Color {
-    wgpu::Color {
-        r: 0.25,
-        g: 0.25,
-        b: 0.3,
-        a: 1.0,
-    }
+    wgpu::Color { r: 0.25, g: 0.25, b: 0.3, a: 1.0 }
 }
 pub fn black_color() -> wgpu::Color {
-    wgpu::Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 1.0,
-    }
+    wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }
 }
 
 // 混合：https://vulkan.lunarg.com/doc/view/1.0.26.0/linux/vkspec.chunked/ch26s01.html
@@ -98,16 +88,65 @@ pub struct MVPUniform {
     pub mvp_matrix: [[f32; 4]; 4],
 }
 
+// 用于暂不填充数据时
+#[allow(dead_code)]
+pub fn empty_uniform_buffer(device: &mut wgpu::Device, size: wgpu::BufferAddress) -> wgpu::Buffer {
+    device.create_buffer(&wgpu::BufferDescriptor {
+        size: size,
+        usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
+    })
+}
+
 pub fn create_uniform_buffer<T>(device: &mut wgpu::Device, uniforms: T) -> wgpu::Buffer
 where
     T: 'static + Copy,
 {
     device
-        .create_buffer_mapped(
-            1,
-            wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
-        )
+        .create_buffer_mapped(1, wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST)
         .fill_from_slice(&[uniforms])
+}
+
+pub fn create_uniform_buffer2<T>(
+    device: &mut wgpu::Device, encoder: &mut wgpu::CommandEncoder, uniforms: T,
+    size: wgpu::BufferAddress,
+) -> wgpu::Buffer
+where
+    T: 'static + Copy,
+{
+    let staging_buffer = device
+        .create_buffer_mapped(1, wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST)
+        .fill_from_slice(&[uniforms]);
+    let uniform_buffer = empty_uniform_buffer(device, size);
+    encoder.copy_buffer_to_buffer(&staging_buffer, 0, &uniform_buffer, 0, size);
+
+    uniform_buffer
+}
+
+pub fn create_storage_buffer<T>(
+    device: &mut wgpu::Device, encoder: &mut wgpu::CommandEncoder, slice: &[T],
+    size: wgpu::BufferAddress,
+) -> (wgpu::Buffer, wgpu::Buffer)
+where
+    T: 'static + Copy,
+{
+    // store buffer 不能直接创建并填充数据？
+    let staging_buffer = device
+        .create_buffer_mapped(
+            slice.len(),
+            wgpu::BufferUsage::MAP_READ
+                | wgpu::BufferUsage::TRANSFER_DST
+                | wgpu::BufferUsage::TRANSFER_SRC,
+        )
+        .fill_from_slice(slice);
+    let storage_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        size,
+        usage: wgpu::BufferUsage::STORAGE
+            | wgpu::BufferUsage::TRANSFER_DST
+            | wgpu::BufferUsage::TRANSFER_SRC,
+    });
+    encoder.copy_buffer_to_buffer(&staging_buffer, 0, &storage_buffer, 0, size);
+
+    (storage_buffer, staging_buffer)
 }
 
 pub fn update_uniform<T>(device: &mut wgpu::Device, uniforms: T, destination: &wgpu::Buffer)

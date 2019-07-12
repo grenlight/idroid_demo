@@ -1,6 +1,7 @@
 extern crate libc;
 extern crate wgpu;
 
+
 use std::ops::Deref;
 
 #[cfg(target_os = "macos")]
@@ -31,16 +32,29 @@ pub struct ViewSize {
     pub height: u32,
 }
 
+#[repr(C)]
+pub struct TouchPoint {
+    pub x: f32,
+    pub y: f32,
+    pub force: f32,
+}
+
 pub trait GPUContext {
     fn get_view_size(&self) -> ViewSize;
     fn update_swap_chain(&mut self);
 }
 
-pub trait SurfaceView {
-    fn resize(&mut self);
-    fn render(&mut self);
+// 元组结构类型，默认的构造方法只能在当前模块访问，除非将元组参数添加 pub
+pub struct AppViewWrapper(pub AppView);
+// `*mut libc::c_void` cannot be sent between threads safely
+// 强制 AppView 为线程安全的
+unsafe impl Send for AppViewWrapper {}
+unsafe impl Sync for AppViewWrapper {}
 
-    fn get_swap_chain(&mut self) -> &mut wgpu::SwapChain;
+impl Deref for AppViewWrapper {
+    type Target = AppView;
 
-    fn enter_frame(&mut self);
+    fn deref(&self) -> &AppView {
+        &self.0
+    }
 }

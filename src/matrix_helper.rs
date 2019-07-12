@@ -4,13 +4,8 @@ use nalgebra_glm as glm;
 pub fn default_mvp(sc_desc: &wgpu::SwapChainDescriptor) -> [[f32; 4]; 4] {
     //
     let radian: glm::TVec1<f32> = glm::radians(&glm::vec1(75.0));
-    let p_matrix: glm::TMat4<f32> = glm::perspective_fov(
-        radian[0],
-        sc_desc.width as f32,
-        sc_desc.height as f32,
-        0.01,
-        100.0,
-    );
+    let p_matrix: glm::TMat4<f32> =
+        glm::perspective_fov(radian[0], sc_desc.width as f32, sc_desc.height as f32, 0.01, 100.0);
     //        let mut  p_matrix: glm::TMat4<f32> = glm::ortho(-1.0, 1.0, -1.0, 1.0, -100.0, 100.0);
     let mut vm_matrix = glm::TMat4::identity();
     vm_matrix = glm::translate(&vm_matrix, &glm::vec3(0.0, 0.0, -2.12));
@@ -35,28 +30,14 @@ pub fn ortho_pixel_mvp(width: f32, height: f32) -> [[f32; 4]; 4] {
 
 #[allow(dead_code)]
 pub fn ortho_pixel(width: f32, height: f32) -> glm::TMat4<f32> {
-    glm::ortho(
-        -width / 2.0,
-        width / 2.0,
-        -height / 2.0,
-        height / 2.0,
-        -1000.0,
-        1000.0,
-    )
+    glm::ortho(-width / 2.0, width / 2.0, -height / 2.0, height / 2.0, -1000.0, 1000.0)
 }
 
 #[allow(dead_code)]
 pub fn ortho_pixel_lh(width: f32, height: f32) -> glm::TMat4<f32> {
     // 左手坐标系: bottom 为正，实际是为负，glm 的 bug ？？
     // 左上角为正，z 轴指向屏幕内为正，向上旋转为正
-    glm::ortho_lh(
-        -width / 2.0,
-        width / 2.0,
-        height / 2.0,
-        -height / 2.0,
-        -1000.0,
-        1000.0,
-    )
+    glm::ortho_lh(-width / 2.0, width / 2.0, height / 2.0, -height / 2.0, -1000.0, 1000.0)
 }
 
 #[allow(dead_code)]

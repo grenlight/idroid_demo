@@ -13,11 +13,15 @@ mod texture;
 mod utils;
 mod vertex;
 
+mod surface_view;
+pub use surface_view::*;
 // #[cfg(not(target_os = "ios"))]
 mod shader;
 
 mod triangle;
 pub use triangle::Triangle;
+
+pub mod fluid;
 
 #[cfg(target_os = "ios")]
 #[no_mangle]

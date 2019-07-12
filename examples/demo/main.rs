@@ -31,8 +31,8 @@ fn main() {
 
     // let screen_scale: fn() -> f32 = screen_scale;
     let v = AppView::new(window);
-    // let mut triangle = idroid::Triangle::new(idroid::AppViewWrapper(v));
-    let mut triangle = idroid::Triangle::new(v);
+    // let mut triangle = idroid::Triangle::new(v);
+    let mut triangle = idroid::fluid::LBMFlow::new(v);
 
     let mut running = true;
     let mut accumulator = Duration::new(0, 0);
@@ -41,10 +41,7 @@ fn main() {
 
     while running {
         events_loop.poll_events(|event| match event {
-            Event::WindowEvent {
-                event: WindowEvent::Resized(size),
-                ..
-            } => {
+            Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
                 // let physical = size.to_physical(window.get_hidpi_factor());
                 // println!("Resizing to {:?}", physical);
                 triangle.resize();

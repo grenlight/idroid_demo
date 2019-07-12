@@ -12,15 +12,9 @@ pub fn from_file(
         Err(e) => panic!("Unable to read {:?}: {:?}", path, e),
     };
 
-    let img = image::load_from_memory(&image_bytes)
-        .expect("Failed to load image.")
-        .to_rgba();
+    let img = image::load_from_memory(&image_bytes).expect("Failed to load image.").to_rgba();
     let (width, height) = img.dimensions();
-    let texture_extent = wgpu::Extent3d {
-        width: width,
-        height: height,
-        depth: 1,
-    };
+    let texture_extent = wgpu::Extent3d { width: width, height: height, depth: 1 };
     let texture = device.create_texture(&wgpu::TextureDescriptor {
         size: texture_extent,
         array_layer_count: 1,
@@ -47,11 +41,7 @@ pub fn from_file(
             texture: &texture,
             mip_level: 0,
             array_layer: 0,
-            origin: wgpu::Origin3d {
-                x: 0.0,
-                y: 0.0,
-                z: 0.0,
-            },
+            origin: wgpu::Origin3d { x: 0.0, y: 0.0, z: 0.0 },
         },
         texture_extent,
     );
@@ -82,11 +72,7 @@ pub fn empty_view(device: &mut wgpu::Device, width: u32, height: u32) -> Texture
     crate::texture::empty(
         device,
         wgpu::TextureFormat::Bgra8Unorm,
-        wgpu::Extent3d {
-            width: width,
-            height: height,
-            depth: 1,
-        },
+        wgpu::Extent3d { width: width, height: height, depth: 1 },
     )
 }
 

@@ -1,8 +1,7 @@
 # Demo rendering error on iOS
 
 ## Run on macOS
-Set Cargo.toml crate-type value to ["rlib"], then:
->$ cargo run --example demo --features metal
+>$ cargo run --example compute --features metal
 
 ## Compile iOS .a file
 Set Cargo.toml crate-type value to ["staticlib"], then:

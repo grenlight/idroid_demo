@@ -71,9 +71,7 @@ fn generate_shader_spirv(name: &str, ty: ShaderType) -> Result<(), Box<Error>> {
 }
 
 fn load_common_vertex_shader() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("shader")
-        .join("common.vs");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("shader").join("common.vs");
 
     let code = match read_to_string(&path) {
         Ok(code) => code,
@@ -91,7 +89,7 @@ fn parse_shader_source(source: &str, output: &mut String) {
             Some(_) => (),
             None => {
                 if line.starts_with(SHADER_IMPORT) {
-                    let imports = line[SHADER_IMPORT.len() ..].split(',');
+                    let imports = line[SHADER_IMPORT.len()..].split(',');
                     // For each import, get the source, and recurse.
                     for import in imports {
                         if let Some(include) = get_shader_funcs(import) {
@@ -123,16 +121,10 @@ fn get_shader_funcs(key: &str) -> Option<&str> {
     }
 }
 
-static VS_MICROS: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/vs_micros.glsl"
-));
-static FS_MICROS: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/fs_micros.glsl"
-));
+static VS_MICROS: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/vs_micros.glsl"));
+static FS_MICROS: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/fs_micros.glsl"));
 
-static COLOR_SPACE_CONVERT: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/color_space_convert.glsl"
-));
+static COLOR_SPACE_CONVERT: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/color_space_convert.glsl"));

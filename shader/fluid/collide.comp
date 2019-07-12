@@ -1,0 +1,51 @@
+layout (local_size_x = 1) in;
+
+layout(set = 0, binding = 0) uniform FluidUniform {
+    // 表示D2Q9离散速度模型速度空间的速度配置
+    // vec2 e[9];
+    float e[18];
+    // lattice 在正规化坐标空间的大小
+    vec2 lattice_size;
+    vec2 lattice_num;
+    float weight[9];
+    // 0： f_tex10， 1: f_tex11
+    int swap;
+};
+
+struct LatticeCell {
+    float cell[9];
+};
+
+struct FluidCell {
+    float color[3];
+};
+layout (set = 0, binding = 1) buffer CollideBuffer  { LatticeCell collideCells[];  };
+layout (set = 0, binding = 2) buffer StreamBuffer   { LatticeCell streamCells[];   };
+layout (set = 0, binding = 3) buffer FluidBuffer    { FluidCell fluidCells[];    };
+
+// 格子的索引
+int indexOfLattice(ivec2 uv) {
+    return uv.x + (uv.y * int(lattice_num.x));
+}
+
+// 更新流体速度等信息
+void updateFluid(ivec2 uv, vec2 velocity, float rho) {
+    int destIndex = uv.x * int(lattice_num.x) + uv.y;
+    fluidCells[destIndex].color[0] = velocity.x; 
+    fluidCells[destIndex].color[1] = velocity.y;
+    fluidCells[destIndex].color[2] = rho;
+}
+
+// collide 
+void updateCollide(ivec2 uv, int direction, float collide) {
+    int destIndex = uv.x * int(lattice_num.x) + uv.y;
+    collideCells[destIndex].cell[direction] = collide;
+}
+
+void main() {
+	uint x = uint(gl_GlobalInvocationID.x);
+
+    fluidCells[x].color[0] = e[x * 3];
+    fluidCells[x].color[1] = e[x * 3 + 1];
+    fluidCells[x].color[2] = e[x * 3 + 2];    
+}

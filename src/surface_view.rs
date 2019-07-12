@@ -1,18 +1,28 @@
 use crate::math::Position;
+use crate::AppViewWrapper;
 use std::time::{Duration, Instant};
 
 extern crate lazy_static;
 use lazy_static::*;
 
+use uni_view::{AppView, GPUContext};
+
 lazy_static! {
     static ref instance: wgpu::Instance = wgpu::Instance::new();
+}
+
+pub trait SurfaceView {
+    fn resize(&mut self);
+    fn update(&mut self, event: wgpu::winit::WindowEvent);
+    fn touch_moved(&mut self, position: Position);
+
+    fn enter_frame(&mut self);
 }
 
 use crate::geometry::plane::Plane;
 use crate::math::ViewSize;
 use crate::utils::MVPUniform;
 use crate::vertex::{Pos, PosTex};
-use crate::SurfaceView;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -24,10 +34,6 @@ struct OffsetUniform {
 
 pub struct Triangle {
     app_view: AppView,
-    // device: wgpu::Device,
-    // surface: wgpu::Surface,
-    // sc_desc: wgpu::SwapChainDescriptor,
-    // swap_chain: wgpu::SwapChain,
     vertex_buf: wgpu::Buffer,
     index_buf: wgpu::Buffer,
     index_count: usize,
@@ -42,7 +48,17 @@ pub struct Triangle {
 impl Triangle {
     pub fn new(app_view: AppView) -> Self {
         let mut app_view = app_view;
+        // let mut device = app_view.get_device(&instance);
         let size = app_view.get_view_size();
+        // let sc_desc = wgpu::SwapChainDescriptor {
+        //     usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
+        //     format: wgpu::TextureFormat::Bgra8Unorm,
+        //     width: size.width,
+        //     height: size.height,
+        // };
+
+        // let surface = app_view.get_surface(&instance);
+        // let swap_chain = device.create_swap_chain(&surface, &sc_desc);
 
         println!("swap_chain");
         use std::mem;
@@ -186,11 +202,8 @@ impl SurfaceView for Triangle {
         );
     }
 
-    fn update(&mut self, _event: wgpu::winit::WindowEvent) {
-        //empty
-    }
-
-    fn touch_moved(&mut self, _position: crate::math::Position) {}
+    fn update(&mut self, event: wgpu::winit::WindowEvent) {}
+    fn touch_moved(&mut self, position: Position) {}
 
     fn enter_frame(&mut self) {
         println!("--- enter frame ---");
@@ -245,5 +258,3 @@ impl Triangle {
         println!("{}", self.offset_uniform.brick_offset);
     }
 }
-
-use crate::*;

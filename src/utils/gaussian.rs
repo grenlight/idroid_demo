@@ -30,7 +30,7 @@ pub fn lookup_table() -> [f32; 32] {
     table[0] = first * scale;
 
     let s = 3.0 / 16.0;
-    for i in 1 .. 15 {
+    for i in 1..15 {
         table[i] = standard(s * i as f32) * scale;
     }
 

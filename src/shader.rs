@@ -17,31 +17,51 @@ pub enum ShaderStage {
 
 pub struct Shader {
     pub vs_module: wgpu::ShaderModule,
-    pub fs_module: wgpu::ShaderModule,
+    pub fs_module: Option<wgpu::ShaderModule>,
 }
 
 #[allow(dead_code)]
 impl Shader {
     pub fn new(name: &str, device: &mut wgpu::Device) -> Self {
         let (vs_module, fs_module) = load_general_glsl(name, device);
-        Shader {
-            vs_module,
-            fs_module,
-        }
+        Shader { vs_module, fs_module: Some(fs_module) }
+    }
+
+    // 计算着色
+    #[cfg(target_os = "ios")]
+    #[allow(dead_code)]
+    pub fn new_by_compute(name: &str, device: &mut wgpu::Device) -> Self {
+        let bytes = generate_shader_source(name, "comp");
+        Shader::shader_by_bytes(&bytes, device)
+    }
+
+    #[cfg(not(target_os = "ios"))]
+    #[allow(dead_code)]
+    pub fn new_by_compute(name: &str, device: &mut wgpu::Device) -> Self {
+        let bytes = generate_shader_source(name, ShaderType::Compute);
+        Shader::shader_by_bytes(&bytes, device)
+    }
+
+    fn shader_by_bytes(bytes: &Vec<u8>, device: &mut wgpu::Device) -> Self {
+        let module = device.create_shader_module(bytes);
+        Shader { vs_module: module, fs_module: None }
     }
 
     pub fn vertex_stage(&self) -> wgpu::PipelineStageDescriptor {
-        wgpu::PipelineStageDescriptor {
-            module: &self.vs_module,
-            entry_point: "main",
-        }
+        wgpu::PipelineStageDescriptor { module: &self.vs_module, entry_point: "main" }
+    }
+
+    pub fn cs_stage(&self) -> wgpu::PipelineStageDescriptor {
+        wgpu::PipelineStageDescriptor { module: &self.vs_module, entry_point: "main" }
     }
 
     pub fn fragment_stage(&self) -> Option<wgpu::PipelineStageDescriptor> {
-        Some(wgpu::PipelineStageDescriptor {
-            module: &self.fs_module,
-            entry_point: "main",
-        })
+        match &self.fs_module {
+            Some(fs_module) => {
+                Some(wgpu::PipelineStageDescriptor { module: fs_module, entry_point: "main" })
+            }
+            None => None,
+        }
     }
 }
 
@@ -117,9 +137,7 @@ fn generate_shader_source(name: &str, ty: ShaderType) -> Vec<u8> {
 }
 
 fn load_common_vertex_shader() -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("shader")
-        .join("common.vs");
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("shader").join("common.vs");
 
     let code = match read_to_string(&path) {
         Ok(code) => code,
@@ -134,7 +152,7 @@ fn load_common_vertex_shader() -> String {
 fn parse_shader_source(source: &str, output: &mut String) {
     for line in source.lines() {
         if line.starts_with(SHADER_IMPORT) {
-            let imports = line[SHADER_IMPORT.len() ..].split(',');
+            let imports = line[SHADER_IMPORT.len()..].split(',');
             // For each import, get the source, and recurse.
             for import in imports {
                 if let Some(include) = get_shader_funcs(import) {
@@ -171,19 +189,13 @@ fn get_shader_funcs(key: &str) -> Option<&str> {
 }
 
 #[allow(dead_code)]
-static VS_MICROS: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/vs_micros.glsl"
-));
+static VS_MICROS: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/vs_micros.glsl"));
 
 #[allow(dead_code)]
-static FS_MICROS: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/fs_micros.glsl"
-));
+static FS_MICROS: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/fs_micros.glsl"));
 
 #[allow(dead_code)]
-static COLOR_SPACE_CONVERT: &'static str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/shader/func/color_space_convert.glsl"
-));
+static COLOR_SPACE_CONVERT: &'static str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/shader/func/color_space_convert.glsl"));
