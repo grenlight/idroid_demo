@@ -31,8 +31,8 @@ pub struct FluidUniform {
     lattice_size: [f32; 2],
     // 格子数
     lattice_num: [f32; 2],
-    weight: [f32; 9],
-    swap: i32,
+    // weight: [f32; 9],
+    // swap: i32,
 }
 
 #[repr(C)]
@@ -72,8 +72,8 @@ fn get_fluid_uniform(lattice_num_x: f32, lattice_num_y: f32, swap: i32) -> Fluid
         e,
         lattice_size: [2.0 / lattice_num_x, 2.0 / lattice_num_y],
         lattice_num: [lattice_num_x, lattice_num_y],
-        weight,
-        swap,
+        // weight,
+        // swap,
     }
 }
 

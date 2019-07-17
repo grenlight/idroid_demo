@@ -3,7 +3,8 @@ use std::io::Read;
 use std::path::PathBuf;
 
 #[cfg(not(target_os = "ios"))]
-use glsl_to_spirv::ShaderType;
+extern crate shaderc;
+use shaderc::ShaderKind;
 
 // 所有 GL_ 打头的宏名称都是 glsl 保留的，不能自定义
 const SHADER_VERSION_GL: &str = "#version 450\n";
@@ -38,11 +39,11 @@ impl Shader {
     #[cfg(not(target_os = "ios"))]
     #[allow(dead_code)]
     pub fn new_by_compute(name: &str, device: &mut wgpu::Device) -> Self {
-        let bytes = generate_shader_source(name, ShaderType::Compute);
-        Shader::shader_by_bytes(&bytes, device)
+        let binary_result = generate_shader_source(name, ShaderKind::Compute);
+        Shader::shader_by_bytes(binary_result.as_binary_u8(), device)
     }
 
-    fn shader_by_bytes(bytes: &Vec<u8>, device: &mut wgpu::Device) -> Self {
+    fn shader_by_bytes(bytes: &[u8], device: &mut wgpu::Device) -> Self {
         let module = device.create_shader_module(bytes);
         Shader { vs_module: module, fs_module: None }
     }
@@ -95,19 +96,19 @@ fn generate_shader_source(name: &str, suffix: &str) -> Vec<u8> {
 pub fn load_general_glsl(
     name: &str, device: &mut wgpu::Device,
 ) -> (wgpu::ShaderModule, wgpu::ShaderModule) {
-    let vs_bytes = generate_shader_source(name, ShaderType::Vertex);
-    let fs_bytes = generate_shader_source(name, ShaderType::Fragment);
-    let vs_module = device.create_shader_module(&vs_bytes);
-    let fs_module = device.create_shader_module(&fs_bytes);
+    let vs_binary = generate_shader_source(name, ShaderKind::Vertex);
+    let fs_binary = generate_shader_source(name, ShaderKind::Fragment);
+    let vs_module = device.create_shader_module(vs_binary.as_binary_u8());
+    let fs_module = device.create_shader_module(fs_binary.as_binary_u8());
 
     (vs_module, fs_module)
 }
 
 #[cfg(not(target_os = "ios"))]
-fn generate_shader_source(name: &str, ty: ShaderType) -> Vec<u8> {
+fn generate_shader_source(name: &str, ty: ShaderKind) -> shaderc::CompilationArtifact {
     let suffix = match ty {
-        ShaderType::Vertex => ".vs",
-        ShaderType::Fragment => ".fs",
+        ShaderKind::Vertex => ".vs",
+        ShaderKind::Fragment => ".fs",
         _ => ".comp",
     };
 
@@ -118,7 +119,7 @@ fn generate_shader_source(name: &str, ty: ShaderType) -> Vec<u8> {
     let code = match read_to_string(&path) {
         Ok(code) => code,
         Err(e) => {
-            if cfg!(target_os = "macos") && ty == ShaderType::Vertex {
+            if cfg!(target_os = "macos") && ty == ShaderKind::Vertex {
                 load_common_vertex_shader()
             } else {
                 panic!("Unable to read {:?}: {:?}", path, e)
@@ -129,11 +130,13 @@ fn generate_shader_source(name: &str, ty: ShaderType) -> Vec<u8> {
     shader_source.push_str(SHADER_VERSION_GL);
     parse_shader_source(&code, &mut shader_source);
 
-    let mut output = glsl_to_spirv::compile(&shader_source, ty).unwrap();
-    let mut spv = Vec::new();
-    output.read_to_end(&mut spv).unwrap();
+let mut compiler = shaderc::Compiler::new().unwrap();
+let mut options = shaderc::CompileOptions::new().unwrap();
+let binary_result = compiler.compile_into_spirv(
+    &shader_source, ty,
+    "shader.glsl", "main", Some(&options)).unwrap();
 
-    spv
+    binary_result
 }
 
 fn load_common_vertex_shader() -> String {

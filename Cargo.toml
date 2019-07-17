@@ -56,10 +56,12 @@ lazy_static = "*"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 winit = "0.18"
+shaderc = "0.6"
 glsl-to-spirv = "*"
 
 # glsl-to-spirv 不支持编译到 iOS 设备
 [build-dependencies]
+shaderc = "0.6"
 glsl-to-spirv = "*"
 
 
