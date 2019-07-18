@@ -25,14 +25,12 @@ pub struct LBMFlow {
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct FluidUniform {
-    // e: [[f32; 2]; 9],
-    e: [f32; 18],
-    // lattice 在正规化坐标空间的大小
-    lattice_size: [f32; 2],
-    // 格子数
-    lattice_num: [f32; 2],
-    // weight: [f32; 9],
-    // swap: i32,
+    e: [[f32; 2]; 9],
+    e0: [[f32; 3]; 9],
+    e1: [f32; 18],
+    e2: [[i32; 3]; 9],
+    e3: [i32; 18],
+
 }
 
 #[repr(C)]
@@ -63,15 +61,29 @@ fn get_fluid_uniform(lattice_num_x: f32, lattice_num_y: f32, swap: i32) -> Fluid
     // 6 2 5
     // 3 0 1
     // 7 4 8
-    let e: [f32; 18] = [
+    
+    let e: [[f32; 2]; 9] = [
+        [0.0, 0.0], [1.0, 0.0], [ 0.0, -1.0], [ -1.0, 0.0], [ 0.0, 1.0], [ 1.0, -1.0], [ -1.0, -1.0], [ -1.0, 1.0], [ 1.0,
+        1.0],
+    ];
+    let e0: [[f32; 3]; 9] = [
+        [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [ 0.0, -1.0, 0.0], [ -1.0, 0.0, 0.0], [ 0.0, 1.0, 0.0], [ 1.0, -1.0, 0.0], [ -1.0, -1.0, 0.0],
+         [ -1.0, 1.0, 0.0], [ 1.0,1.0, 0.0],
+    ];
+    let e1: [f32; 18] = [
         0.0, 0.0, 1.0, 0.0, 0.0, -1.0, -1.0, 0.0, 0.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0,
         1.0,
     ];
+    let e2: [[i32; 3]; 9] = [[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],[1, 1, 1],
+    ];
+    let e3: [i32; 18] = [
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    ];
     let weight: [f32; 9] = [w0, w1, w1, w1, w1, w2, w2, w2, w2];
     FluidUniform {
-        e,
-        lattice_size: [2.0 / lattice_num_x, 2.0 / lattice_num_y],
-        lattice_num: [lattice_num_x, lattice_num_y],
+        e, e0, e1, e2, e3,
+        // lattice_size: [2.0 / lattice_num_x, 2.0 / lattice_num_y],
+        // lattice_num: [lattice_num_x, lattice_num_y],
         // weight,
         // swap,
     }
@@ -115,11 +127,12 @@ impl LBMFlow {
             usage: wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST,
         };
         let uniform_buf = app_view.device.create_buffer(&bd);
+        let uniform_range = 16 * 9 + 8 * 2;
         let sb = app_view
             .device
             .create_buffer_mapped(1, wgpu::BufferUsage::UNIFORM | wgpu::BufferUsage::TRANSFER_DST)
             .fill_from_slice(&[get_fluid_uniform(lattice_num_x, lattice_num_y, swap)]);
-        encoder.copy_buffer_to_buffer(&sb, 0, &uniform_buf, 0, mem::size_of::<FluidUniform>() as wgpu::BufferAddress);
+        encoder.copy_buffer_to_buffer(&sb, 0, &uniform_buf, 0, uniform_range);
 
         // Create pipeline layout
         let bind_group_layout =

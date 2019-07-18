@@ -1,0 +1,32 @@
+// define uniform struct
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct FluidUniform {
+    e: [f32; 18],
+    lattice_size: [f32; 2],
+    lattice_num: [f32; 2],
+    weight: [f32; 9],
+    swap: i32,
+}
+// bind layout
+let layout = create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        bindings: &[
+            wgpu::BindGroupLayoutBinding {
+                binding: 0,
+                visibility: wgpu::ShaderStage::COMPUTE,
+                ty: wgpu::BindingType::UniformBuffer,
+            },
+...
+
+// bind actual uniform buffer resource
+let group = create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            bindings: &[
+                wgpu::Binding {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer {
+                        buffer: &uniform_buf,
+                        range: 0..(std::mem::size_of::<FluidUniform>() as wgpu::BufferAddress),
+                    },
+                },
+...
